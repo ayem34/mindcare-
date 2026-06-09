@@ -22,8 +22,8 @@ const CHAMPS = [
 ];
 
 const SELECT_CHAMPS = [
-  { key: 'family_history',  label: 'Antécédents familiaux',   options: [['0','Non'],['1','Oui']] },
-  { key: 'coping_struggles', label: 'Difficultés à gérer',   options: [['0','Non'],['1','Oui']] },
+  { key: 'family_history',   label: 'Antécédents familiaux', options: [['0','Non'],['1','Oui']] },
+  { key: 'coping_struggles', label: 'Difficultés à gérer',  options: [['0','Non'],['1','Oui']] },
 ];
 
 export default function Evaluation() {
@@ -89,13 +89,14 @@ export default function Evaluation() {
       <div className="flex gap-2 flex-wrap mb-6">
         {JOURS.map((j, i) => (
           <button key={i} onClick={() => setJourActif(i)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            style={
               jourActif === i
-                ? 'bg-indigo-600 text-white shadow'
+                ? { background: '#27AE7A', color: '#fff', border: '1px solid #27AE7A' }
                 : jourComplet(i)
-                ? 'bg-green-100 text-green-700 border border-green-300'
-                : 'bg-white text-gray-600 border border-gray-200 hover:border-indigo-300'
-            }`}>
+                ? { background: '#E8F5F0', color: '#1A7A56', border: '1px solid rgba(39,174,122,0.35)' }
+                : { background: '#fff', color: '#5A7499', border: '1px solid #DDE8E3' }
+            }
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all">
             {jourComplet(i) ? '✓ ' : ''}{j}
           </button>
         ))}
@@ -115,14 +116,19 @@ export default function Evaluation() {
                 placeholder={placeholder}
                 value={e[key]}
                 onChange={(ev) => updateEntree(jourActif, key, ev.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                style={{'--tw-ring-color': 'rgba(39,174,122,0.4)'}}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
+                onFocus={ev => ev.target.style.boxShadow = '0 0 0 3px rgba(39,174,122,0.2)'}
+                onBlur={ev => ev.target.style.boxShadow = ''} />
             </div>
           ))}
           {SELECT_CHAMPS.map(({ key, label, options }) => (
             <div key={key}>
               <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
               <select value={e[key]} onChange={(ev) => updateEntree(jourActif, key, ev.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none"
+                onFocus={ev => ev.target.style.boxShadow = '0 0 0 3px rgba(39,174,122,0.2)'}
+                onBlur={ev => ev.target.style.boxShadow = ''}>
                 {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
@@ -139,7 +145,9 @@ export default function Evaluation() {
             placeholder="Exemple : Aujourd'hui je me suis senti épuisé sans raison..."
             value={e.texte_journal}
             onChange={(ev) => updateEntree(jourActif, 'texte_journal', ev.target.value)}
-            className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none" />
+            className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none resize-none"
+            onFocus={ev => ev.target.style.boxShadow = '0 0 0 3px rgba(39,174,122,0.2)'}
+            onBlur={ev => ev.target.style.boxShadow = ''} />
           <p className="text-xs text-gray-400 mt-1">{e.texte_journal.length} caractères (min. 10)</p>
         </div>
 
@@ -152,7 +160,10 @@ export default function Evaluation() {
           </button>
           {jourActif < 6
             ? <button onClick={() => setJourActif(jourActif + 1)}
-                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                style={{ background: '#27AE7A', color: '#fff' }}
+                className="px-4 py-2 text-sm rounded-lg transition-colors"
+                onMouseEnter={ev => ev.target.style.background = '#1A7A56'}
+                onMouseLeave={ev => ev.target.style.background = '#27AE7A'}>
                 Suivant →
               </button>
             : null}
@@ -162,8 +173,8 @@ export default function Evaluation() {
       {/* Progression */}
       <div className="mt-4 flex items-center gap-3">
         <div className="flex-1 bg-gray-200 rounded-full h-2">
-          <div className="bg-indigo-600 h-2 rounded-full transition-all"
-            style={{ width: `${(entrees.filter((_, i) => jourComplet(i)).length / 7) * 100}%` }} />
+          <div className="h-2 rounded-full transition-all"
+            style={{ background: '#27AE7A', width: `${(entrees.filter((_, i) => jourComplet(i)).length / 7) * 100}%` }} />
         </div>
         <span className="text-sm text-gray-600">
           {entrees.filter((_, i) => jourComplet(i)).length}/7 jours complétés
@@ -177,13 +188,16 @@ export default function Evaluation() {
       {/* Bouton soumettre */}
       <div className="mt-6 flex justify-end">
         <button onClick={handleSubmit} disabled={loading}
-          className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl text-sm transition-colors shadow-sm">
+          style={{ background: loading ? undefined : '#27AE7A' }}
+          className="disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl text-sm transition-colors shadow-sm"
+          onMouseEnter={ev => { if (!loading) ev.target.style.background = '#1A7A56'; }}
+          onMouseLeave={ev => { if (!loading) ev.target.style.background = '#27AE7A'; }}>
           {loading ? (
             <span className="flex items-center gap-2">
               <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
               Analyse en cours…
             </span>
-          ) : 'Lancer l\'analyse IA'}
+          ) : "Lancer l'analyse IA"}
         </button>
       </div>
     </div>
