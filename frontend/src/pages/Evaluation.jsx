@@ -44,38 +44,46 @@ export default function Evaluation() {
     return CHAMPS.every(c => e[c.key] !== '') && e.texte_journal.trim().length > 10;
   };
 
-  const handleSubmit = async () => {
-    const incomplets = entrees.map((_, i) => !jourComplet(i)).filter(Boolean);
-    if (incomplets.length > 0) {
-      setErreur('Remplissez tous les champs de chaque jour (journal : min 10 caractères).');
-      return;
+ const handleSubmit = async () => {
+  const incomplets = entrees.map((_, i) => !jourComplet(i)).filter(Boolean);
+  if (incomplets.length > 0) {
+    setErreur('Remplissez tous les champs de chaque jour (journal : min 10 caractères).');
+    return;
+  }
+  setErreur('');
+  setLoading(true);
+  try {
+    const payload = {
+      entrees: entrees.map(e => ({
+        heures_sommeil:     parseFloat(e.heures_sommeil),
+        stress_level:       parseFloat(e.stress_level),
+        anxiety_level:      parseFloat(e.anxiety_level),
+        social_media_hours: parseFloat(e.social_media_hours),
+        physical_activity:  parseFloat(e.physical_activity),
+        family_history:     parseFloat(e.family_history),
+        coping_struggles:   parseFloat(e.coping_struggles),
+        mood_swings:        parseFloat(e.mood_swings),
+        days_indoors:       parseFloat(e.days_indoors),
+        texte_journal:      e.texte_journal,
+      }))
+    };
+    const { data } = await predict(payload);
+    navigate('/resultat', { state: { resultat: data } });
+  } catch (err) {
+    const detail = err.response?.data?.detail;
+    let message = 'Erreur lors de la prédiction.';
+    if (typeof detail === 'string') {
+      message = detail;
+    } else if (Array.isArray(detail) && detail.length > 0) {
+      message = detail.map(e => e.msg).join(', ');
+    } else if (typeof detail === 'object') {
+      message = JSON.stringify(detail);
     }
-    setErreur('');
-    setLoading(true);
-    try {
-      const payload = {
-        entrees: entrees.map(e => ({
-          heures_sommeil:     parseFloat(e.heures_sommeil),
-          stress_level:       parseFloat(e.stress_level),
-          anxiety_level:      parseFloat(e.anxiety_level),
-          social_media_hours: parseFloat(e.social_media_hours),
-          physical_activity:  parseFloat(e.physical_activity),
-          family_history:     parseFloat(e.family_history),
-          coping_struggles:   parseFloat(e.coping_struggles),
-          mood_swings:        parseFloat(e.mood_swings),
-          days_indoors:       parseFloat(e.days_indoors),
-          texte_journal:      e.texte_journal,
-        }))
-      };
-      const { data } = await predict(payload);
-      navigate('/resultat', { state: { resultat: data } });
-    } catch (err) {
-      setErreur(err.response?.data?.detail || 'Erreur lors de la prédiction.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+    setErreur(message);
+  } finally {
+    setLoading(false);
+  }
+};
   const e = entrees[jourActif];
 
   return (
