@@ -6,6 +6,11 @@ Toutes les constantes, chemins et hyperparamètres sont définis ici.
 import os
 from pathlib import Path
 
+
+# ─────────────────────────────────────────────
+# CHATBOT — MISTRAL AI (assistant conversationnel)
+# ─────────────────────────────────────────────
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "")   # à définir dans .env
 # ─────────────────────────────────────────────
 # CHEMINS RACINES
 # ─────────────────────────────────────────────

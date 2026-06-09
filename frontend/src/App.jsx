@@ -5,6 +5,7 @@ import Dashboard   from './pages/Dashboard';
 import Evaluation  from './pages/Evaluation';
 import Historique  from './pages/Historique';
 import Resultat    from './pages/Resultat';
+import Chat        from './pages/Chat';          // ← import du composant Chat
 import Navbar      from './components/Navbar';
 
 // Route protégée : redirige vers /login si non connecté
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/evaluation" element={<PrivateRoute><Evaluation /></PrivateRoute>} />
         <Route path="/historique" element={<PrivateRoute><Historique /></PrivateRoute>} />
         <Route path="/resultat"   element={<PrivateRoute><Resultat /></PrivateRoute>} />
+        <Route path="/chat"       element={<PrivateRoute><Chat /></PrivateRoute>} />  {/* ← AJOUT */}
         <Route path="*"           element={<Navigate to={user ? "/dashboard" : "/login"} replace />} />
       </Routes>
     </>

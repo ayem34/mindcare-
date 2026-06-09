@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.database.database import create_tables
 from backend.utils.model_loader import check_models_exist
-from backend.api.routes import auth, predict, historique
+from backend.api.routes import auth, predict, historique, chat
 
 logging.basicConfig(
     level=logging.INFO,
@@ -57,7 +57,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(predict.router)
 app.include_router(historique.router)
-
+app.include_router(chat.router)
 
 @app.get("/health", tags=["Système"])
 def health():

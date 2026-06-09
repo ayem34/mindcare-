@@ -1,18 +1,39 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getStats, getHistorique } from '../services/api';
+
+const NIVEAU = {
+  faible: { color: '#27AE7A', bg: '#E8F5F0', emoji: '🟢', label: 'Faible' },
+  modere: { color: '#E67E22', bg: '#FEF5E8', emoji: '🟡', label: 'Modéré' },
+  eleve:  { color: '#D04A4A', bg: '#FEF2F2', emoji: '🔴', label: 'Élevé' },
+};
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [stats, setStats] = useState(null);
+  const [derniers, setDerniers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getStats(), getHistorique(1, 5)])
+      .then(([s, h]) => {
+        setStats(s.data);
+        setDerniers(h.data.resultats || []);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const displayName = user?.prenom
     ? `${user.prenom} ${user.nom ?? ''}`.trim()
     : user?.email?.split('@')[0]?.toUpperCase() ?? 'UTILISATEUR';
 
-  function handleLogout() {
+  const handleLogout = () => {
     logout();
     navigate('/login');
-  }
+  };
 
   const troubles = [
     { name: 'Dépression',          color: '#4A6A8A' },
@@ -25,36 +46,26 @@ export default function Dashboard() {
   ];
 
   const garanties = [
-    {
-      label: 'Données anonymisées',
-      sub: 'Aucune donnée nominative transmise',
-      icon: (
-        <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-          <rect x="2" y="5" width="11" height="9" rx="2" stroke="#27AE7A" strokeWidth="1.4"/>
-          <path d="M5 5V3.5a2.5 2.5 0 0 1 5 0V5" stroke="#27AE7A" strokeWidth="1.4" strokeLinecap="round"/>
-        </svg>
-      ),
-    },
-    {
-      label: "Outil d'aide, non de diagnostic",
-      sub: 'À interpréter avec un professionnel',
-      icon: (
-        <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-          <circle cx="7.5" cy="7.5" r="5.5" stroke="#27AE7A" strokeWidth="1.4"/>
-          <path d="M5 7.5l2 2 3-3" stroke="#27AE7A" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-    },
-    {
-      label: 'Conformité RGPD',
-      sub: 'Données pseudonymisées, stockage EU',
-      icon: (
-        <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-          <path d="M7.5 2L12 4v4c0 2.8-2 4.8-4.5 5.5C5 12.8 3 10.8 3 8V4l4.5-2z" stroke="#27AE7A" strokeWidth="1.4" strokeLinejoin="round"/>
-        </svg>
-      ),
-    },
+    { label: 'Données anonymisées', sub: 'Aucune donnée nominative transmise', icon: '🔒' },
+    { label: "Outil d'aide, non de diagnostic", sub: 'À interpréter avec un professionnel', icon: '⚕️' },
+    { label: 'Conformité RGPD', sub: 'Données pseudonymisées, stockage EU', icon: '🔐' },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  const totalEvals = stats?.total_predictions || 0;
+  const scoreMoyen = stats?.score_moyen != null ? `${(stats.score_moyen * 100).toFixed(0)}%` : null;
+  const scoreMin = stats?.score_min != null ? `${(stats.score_min * 100).toFixed(0)}%` : null;
+  const scoreMax = stats?.score_max != null ? `${(stats.score_max * 100).toFixed(0)}%` : null;
+  const dernierNiveau = stats?.dernier_niveau;
+  const dernierScore = stats?.dernier_score != null ? (stats.dernier_score * 100).toFixed(0) : null;
+  const conf = NIVEAU[dernierNiveau] || {};
 
   return (
     <>
@@ -80,7 +91,6 @@ export default function Dashboard() {
 
         html, body, #root { height: 100%; }
 
-        /* ── Shell */
         .db-shell {
           min-height: 100vh;
           background: var(--bg);
@@ -89,92 +99,16 @@ export default function Dashboard() {
           flex-direction: column;
         }
 
-        /* ── Nav */
-        .db-nav {
-          position: sticky; top: 0; z-index: 100;
-          background: rgba(245,248,247,0.94);
-          backdrop-filter: blur(14px);
-          border-bottom: 1px solid var(--border);
-          display: flex; align-items: center;
-          padding: 0 2.5rem;
-          height: 62px;
-        }
+        /* Suppression de la navbar - donc plus de style .db-nav */
 
-        .db-nav-logo {
-          display: flex; align-items: center; gap: 10px;
-          text-decoration: none; flex-shrink: 0;
-          margin-right: 3rem;
-        }
-        .db-nav-logo-mark {
-          width: 34px; height: 34px;
-          border-radius: 10px;
-          background: var(--green-soft);
-          border: 1px solid rgba(39,174,122,0.22);
-          display: flex; align-items: center; justify-content: center;
-          transition: background 0.2s;
-        }
-        .db-nav-logo-mark:hover { background: rgba(39,174,122,0.18); }
-        .db-nav-logo-text {
-          font-family: 'DM Serif Display', serif;
-          font-size: 17px; color: var(--navy);
-          letter-spacing: -0.02em;
-        }
-        .db-nav-logo-ia {
-          font-size: 10px; font-weight: 700;
-          color: var(--green);
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          margin-left: 2px;
-        }
-
-        .db-nav-links { display: flex; align-items: center; gap: 2px; flex: 1; }
-        .db-nav-link {
-          padding: 7px 15px;
-          border-radius: 8px;
-          font-size: 13.5px; font-weight: 500;
-          color: var(--text-muted);
-          cursor: pointer; border: none; background: none;
-          font-family: 'DM Sans', sans-serif;
-          transition: background 0.15s, color 0.15s;
-        }
-        .db-nav-link:hover { background: var(--green-soft); color: var(--navy); }
-        .db-nav-link.active {
-          background: var(--green-soft);
-          color: var(--green-mid);
-          font-weight: 600;
-          border: 1px solid rgba(39,174,122,0.2);
-        }
-
-        .db-nav-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-        .db-nav-user { display: flex; align-items: center; gap: 9px; }
-        .db-nav-avatar {
-          width: 32px; height: 32px; border-radius: 50%;
-          background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 11.5px; font-weight: 700; color: #fff;
-          flex-shrink: 0;
-          border: 2px solid rgba(39,174,122,0.25);
-        }
-        .db-nav-username { font-size: 13px; font-weight: 600; color: var(--navy); }
-        .db-nav-sep { width: 1px; height: 20px; background: var(--border); }
-        .db-nav-logout {
-          font-size: 13px; font-weight: 600; color: #DC2626;
-          background: none; border: none; cursor: pointer;
-          font-family: 'DM Sans', sans-serif;
-          padding: 6px 11px; border-radius: 7px;
-          transition: background 0.15s, color 0.15s;
-        }
-        .db-nav-logout:hover { background: rgba(220,38,38,0.07); color: #B91C1C; }
-
-        /* ── Main */
         .db-main {
           flex: 1;
-          max-width: 1140px; width: 100%;
+          max-width: 1140px;
+          width: 100%;
           margin: 0 auto;
           padding: 2.75rem 2.5rem 3.5rem;
         }
 
-        /* ── Page header */
         .db-page-header {
           display: flex; align-items: flex-start;
           justify-content: space-between;
@@ -203,7 +137,6 @@ export default function Dashboard() {
         }
         .db-sub { font-size: 14.5px; color: var(--text-muted); line-height: 1.55; }
 
-        /* CTA */
         .db-cta {
           display: inline-flex; align-items: center; gap: 8px;
           background: var(--green); color: #fff;
@@ -226,7 +159,6 @@ export default function Dashboard() {
           font-size: 16px; line-height: 1;
         }
 
-        /* ── Grid */
         .db-grid {
           display: grid;
           grid-template-columns: 1fr 330px;
@@ -234,7 +166,6 @@ export default function Dashboard() {
           align-items: start;
         }
 
-        /* ── Card */
         .db-card {
           background: var(--card);
           border: 1px solid var(--border);
@@ -258,7 +189,6 @@ export default function Dashboard() {
           border-radius: 100px; padding: 3px 10px;
         }
 
-        /* ── Empty state */
         .db-empty {
           display: flex; flex-direction: column;
           align-items: center; justify-content: center;
@@ -270,6 +200,7 @@ export default function Dashboard() {
           border: 1.5px dashed rgba(39,174,122,0.35);
           display: flex; align-items: center; justify-content: center;
           margin-bottom: 1.5rem;
+          font-size: 32px;
         }
         .db-empty-h {
           font-family: 'DM Serif Display', serif;
@@ -295,10 +226,8 @@ export default function Dashboard() {
           box-shadow: 0 6px 18px rgba(39,174,122,0.28);
         }
 
-        /* ── Sidebar */
         .db-sidebar { display: flex; flex-direction: column; gap: 1.1rem; }
 
-        /* Trouble list */
         .db-trouble-list { display: flex; flex-direction: column; gap: 5px; }
         .db-trouble-item {
           display: flex; align-items: center; gap: 11px;
@@ -319,7 +248,6 @@ export default function Dashboard() {
           letter-spacing: 0.03em;
         }
 
-        /* Garanties */
         .db-trust-list { display: flex; flex-direction: column; gap: 7px; }
         .db-trust-item {
           display: flex; align-items: flex-start; gap: 10px;
@@ -328,16 +256,13 @@ export default function Dashboard() {
           border: 1px solid rgba(39,174,122,0.1);
         }
         .db-trust-icon {
-          width: 28px; height: 28px; border-radius: 8px;
-          background: var(--green-soft);
-          border: 1px solid rgba(39,174,122,0.18);
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0; margin-top: 1px;
+          font-size: 20px;
+          width: 28px;
+          text-align: center;
         }
         .db-trust-label { font-size: 12.5px; font-weight: 600; color: var(--navy); line-height: 1.35; }
         .db-trust-sub { font-size: 11.5px; font-weight: 400; color: var(--text-muted); margin-top: 1px; }
 
-        /* Urgence */
         .db-urgency {
           background: #FEF2F2;
           border: 1px solid rgba(220,38,38,0.16);
@@ -345,9 +270,7 @@ export default function Dashboard() {
           display: flex; align-items: center; gap: 13px;
         }
         .db-urgency-icon {
-          width: 40px; height: 40px; border-radius: 10px;
-          background: rgba(220,38,38,0.09);
-          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+          font-size: 28px;
         }
         .db-urgency-title { font-size: 12px; font-weight: 700; color: #B91C1C; margin-bottom: 1px; }
         .db-urgency-num {
@@ -356,7 +279,6 @@ export default function Dashboard() {
         }
         .db-urgency-sub { font-size: 11px; color: #E05252; margin-top: 2px; }
 
-        /* ── Footer */
         .db-footer {
           border-top: 1px solid var(--border);
           padding: 1.1rem 2.5rem;
@@ -367,33 +289,101 @@ export default function Dashboard() {
         .db-footer-l strong { color: var(--text-muted); font-weight: 600; }
         .db-footer-r { font-size: 11px; color: var(--text-light); }
 
-        /* ── Responsive */
         @media (max-width: 900px) {
           .db-grid { grid-template-columns: 1fr; }
         }
         @media (max-width: 600px) {
           .db-main { padding: 1.5rem 1.25rem 2.5rem; }
-          .db-nav  { padding: 0 1.25rem; }
           .db-page-header { flex-direction: column; }
-          .db-nav-username { display: none; }
+        }
+
+        /* Styles supplémentaires pour les stats et le tableau */
+        .stats-row {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+        }
+        .stat-item {
+          background: var(--green-pale);
+          border-radius: 14px;
+          padding: 0.8rem 1rem;
+          text-align: center;
+        }
+        .stat-label {
+          font-size: 11px;
+          text-transform: uppercase;
+          color: var(--text-muted);
+          display: block;
+        }
+        .stat-value {
+          font-size: 24px;
+          font-weight: 700;
+          color: var(--navy);
+        }
+        .text-green { color: #27AE7A !important; }
+        .text-red { color: #D04A4A !important; }
+
+        .last-eval-card {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          padding: 1rem;
+          border-radius: 14px;
+          margin-bottom: 1.5rem;
+        }
+        .last-eval-emoji { font-size: 2rem; }
+        .last-eval-label { font-size: 11px; color: var(--text-muted); }
+        .last-eval-risk { font-weight: bold; font-size: 1rem; }
+        .last-eval-link { margin-left: auto; font-size: 13px; color: var(--green); text-decoration: none; }
+
+        .table-wrapper { overflow-x: auto; }
+        .db-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 13px;
+        }
+        .db-table th, .db-table td {
+          padding: 12px 8px;
+          text-align: left;
+          border-bottom: 1px solid var(--border);
+        }
+        .score-cell { font-weight: bold; }
+        .level-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 8px;
+          border-radius: 40px;
+          font-size: 12px;
+        }
+        .chat-btn {
+          background: none;
+          border: 1px solid var(--green);
+          border-radius: 40px;
+          padding: 4px 12px;
+          color: var(--green);
+          font-size: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .chat-btn:hover {
+          background: var(--green);
+          color: white;
         }
       `}</style>
 
       <div className="db-shell">
+        {/* La navbar a été supprimée */}
 
-        
-
-        {/* ══ MAIN */}
         <main className="db-main">
-
-          {/* Page header */}
           <div className="db-page-header">
             <div>
               <div className="db-eyebrow">
                 <div className="db-eyebrow-dot" />
                 Tableau de bord
               </div>
-              <h1 className="db-h1">Bonjour, {displayName} </h1>
+              <h1 className="db-h1">Bonjour, {displayName}</h1>
               <p className="db-sub">Voici votre bilan de santé mentale</p>
             </div>
             <button className="db-cta" onClick={() => navigate('/evaluation')}>
@@ -402,45 +392,102 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* Main grid */}
           <div className="db-grid">
-
-            {/* Left — évaluations */}
+            {/* Colonne principale dynamique */}
             <div className="db-card">
               <div className="db-card-head">
-                <div className="db-card-title">Évaluations récentes</div>
+                <div className="db-card-title">Vue d'ensemble</div>
                 <span className="db-card-badge">7 troubles analysés</span>
               </div>
-              <div className="db-empty">
-                <div className="db-empty-ring">
-                  <svg width="32" height="32" viewBox="0 0 34 34" fill="none">
-                    <path d="M4 17h5l3.5-9 5 18 3.5-10.5 2.5 5H30"
-                          stroke="#27AE7A" strokeWidth="2.1"
-                          strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <h2 className="db-empty-h">Aucune évaluation encore</h2>
-                <p className="db-empty-p">
-                  Commencez votre première évaluation pour obtenir
-                  un bilan personnalisé de votre santé mentale.
-                </p>
-                <button className="db-empty-btn" onClick={() => navigate('/evaluation')}>
-                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                    <path d="M8 3v10M3 8h10" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                  Commencer maintenant
-                </button>
+              <div style={{ padding: '1.2rem' }}>
+                {totalEvals === 0 ? (
+                  <div className="db-empty">
+                    <div className="db-empty-ring">📊</div>
+                    <h2 className="db-empty-h">Aucune évaluation encore</h2>
+                    <p className="db-empty-p">
+                      Commencez votre première évaluation pour obtenir un bilan personnalisé de votre santé mentale.
+                    </p>
+                    <button className="db-empty-btn" onClick={() => navigate('/evaluation')}>
+                      ➕ Commencer maintenant
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="stats-row">
+                      <div className="stat-item"><span className="stat-label">Évaluations</span><span className="stat-value">{totalEvals}</span></div>
+                      <div className="stat-item"><span className="stat-label">Score moyen</span><span className="stat-value">{scoreMoyen || '—'}</span></div>
+                      <div className="stat-item"><span className="stat-label">Meilleur</span><span className="stat-value text-green">{scoreMin || '—'}</span></div>
+                      <div className="stat-item"><span className="stat-label">Pire</span><span className="stat-value text-red">{scoreMax || '—'}</span></div>
+                    </div>
+
+                    {dernierNiveau && (
+                      <div className="last-eval-card" style={{ backgroundColor: conf.bg }}>
+                        <span className="last-eval-emoji">{conf.emoji}</span>
+                        <div>
+                          <div className="last-eval-label">Dernière évaluation</div>
+                          <div className="last-eval-risk">Risque {conf.label} — {dernierScore}%</div>
+                        </div>
+                        <Link to="/historique" className="last-eval-link">Voir l'historique →</Link>
+                      </div>
+                    )}
+
+                    <div className="table-wrapper">
+                      <table className="db-table">
+                        <thead>
+                          <tr>
+                            <th>Date</th><th>Score</th><th>Niveau</th><th>Classe NLP</th><th>Alerte</th><th>Assistant</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {derniers.map(r => {
+                            const c = NIVEAU[r.niveau_risque] || {};
+                            let dateStr = 'Date inconnue';
+                            if (r.date_prediction) {
+                              const d = new Date(r.date_prediction);
+                              if (!isNaN(d.getTime())) dateStr = d.toLocaleDateString('fr-FR');
+                            }
+                            const evalId = r.id_evaluation || r.evaluation_id || r.id;
+                            return (
+                              <tr key={r.id}>
+                                <td>{dateStr}</td>
+                                <td className="score-cell">{(r.score_final * 100).toFixed(1)}%</td>
+                                <td><span className="level-badge" style={{ backgroundColor: c.bg, color: c.color }}>{c.emoji} {c.label}</span></td>
+                                <td>{r.classe_nlp || '—'}</td>
+                                <td>{r.signal_suicidaire ? '🚨 OUI' : '—'}</td>
+                                <td>
+                                  <button
+                                    onClick={() => {
+                                      if (evalId) {
+                                        navigate('/chat', {
+                                          state: {
+                                            id_evaluation: evalId,
+                                            resultat: { niveau_risque: r.niveau_risque, score_final: r.score_final }
+                                          }
+                                        });
+                                      } else {
+                                        alert('Identifiant manquant');
+                                      }
+                                    }}
+                                    className="chat-btn"
+                                  >
+                                    💬 Discuter
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* Right sidebar */}
+            {/* Sidebar */}
             <div className="db-sidebar">
-
-              {/* Troubles */}
               <div className="db-card">
-                <div className="db-card-head">
-                  <div className="db-card-title">Troubles analysés</div>
-                </div>
+                <div className="db-card-head"><div className="db-card-title">Troubles analysés</div></div>
                 <div style={{ padding: '1.1rem' }}>
                   <div className="db-trouble-list">
                     {troubles.map(t => (
@@ -453,12 +500,8 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-
-              {/* Garanties */}
               <div className="db-card">
-                <div className="db-card-head">
-                  <div className="db-card-title">Garanties</div>
-                </div>
+                <div className="db-card-head"><div className="db-card-title">Garanties</div></div>
                 <div style={{ padding: '1.1rem' }}>
                   <div className="db-trust-list">
                     {garanties.map(g => (
@@ -473,29 +516,18 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-
-              {/* Urgence */}
               <div className="db-urgency">
-                <div className="db-urgency-icon">
-                  <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
-                    <path d="M10 3v7M10 14v.5"
-                          stroke="#B91C1C" strokeWidth="1.8" strokeLinecap="round"/>
-                    <circle cx="10" cy="10" r="8"
-                            stroke="#B91C1C" strokeWidth="1.4"/>
-                  </svg>
-                </div>
+                <div className="db-urgency-icon">🚨</div>
                 <div>
                   <div className="db-urgency-title">Urgence psychiatrique</div>
                   <div className="db-urgency-num">3114</div>
                   <div className="db-urgency-sub">Numéro national gratuit · 24h/24</div>
                 </div>
               </div>
-
             </div>
           </div>
         </main>
 
-        {/* ══ FOOTER */}
         <footer className="db-footer">
           <div className="db-footer-l">
             <strong>Projet Tutoré S2</strong> · Master Data Science · INPHB-IDSI 2025/2026
@@ -504,7 +536,6 @@ export default function Dashboard() {
             Ce service ne constitue pas un diagnostic médical professionnel.
           </div>
         </footer>
-
       </div>
     </>
   );
