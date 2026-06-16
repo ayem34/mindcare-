@@ -9,6 +9,8 @@ const NIVEAU = {
   eleve:  { color: '#D04A4A', bg: '#FEF2F2', emoji: '🔴', label: 'Élevé' },
 };
 
+import { telechargerPDF } from '../components/RapportPDF';
+
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -67,6 +69,8 @@ export default function Dashboard() {
   const dernierScore = stats?.dernier_score != null ? (stats.dernier_score * 100).toFixed(0) : null;
   const conf = NIVEAU[dernierNiveau] || {};
 
+  const pdfData = { displayName, totalEvals, scoreMoyen, scoreMin, scoreMax, dernierNiveau, dernierScore, derniers, conf };
+
   return (
     <>
       <style>{`
@@ -98,8 +102,6 @@ export default function Dashboard() {
           display: flex;
           flex-direction: column;
         }
-
-        /* Suppression de la navbar - donc plus de style .db-nav */
 
         .db-main {
           flex: 1;
@@ -137,6 +139,8 @@ export default function Dashboard() {
         }
         .db-sub { font-size: 14.5px; color: var(--text-muted); line-height: 1.55; }
 
+        .db-header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
         .db-cta {
           display: inline-flex; align-items: center; gap: 8px;
           background: var(--green); color: #fff;
@@ -144,7 +148,7 @@ export default function Dashboard() {
           padding: 12px 20px;
           font-family: 'DM Sans', sans-serif;
           font-size: 14px; font-weight: 700;
-          cursor: pointer; flex-shrink: 0;
+          cursor: pointer;
           transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
         }
         .db-cta:hover {
@@ -157,6 +161,29 @@ export default function Dashboard() {
           background: rgba(255,255,255,0.22);
           display: flex; align-items: center; justify-content: center;
           font-size: 16px; line-height: 1;
+        }
+
+        .db-pdf-btn {
+          display: inline-flex; align-items: center; gap: 7px;
+          background: #fff;
+          color: var(--text-muted);
+          border: 1.5px solid var(--border);
+          border-radius: 11px;
+          padding: 11px 16px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13px; font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .db-pdf-btn:hover {
+          border-color: #D04A4A;
+          color: #D04A4A;
+          background: #FEF2F2;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 14px rgba(208,74,74,0.12);
+        }
+        .db-pdf-icon {
+          font-size: 16px;
         }
 
         .db-grid {
@@ -255,11 +282,7 @@ export default function Dashboard() {
           background: var(--green-pale);
           border: 1px solid rgba(39,174,122,0.1);
         }
-        .db-trust-icon {
-          font-size: 20px;
-          width: 28px;
-          text-align: center;
-        }
+        .db-trust-icon { font-size: 20px; width: 28px; text-align: center; }
         .db-trust-label { font-size: 12.5px; font-weight: 600; color: var(--navy); line-height: 1.35; }
         .db-trust-sub { font-size: 11.5px; font-weight: 400; color: var(--text-muted); margin-top: 1px; }
 
@@ -269,9 +292,7 @@ export default function Dashboard() {
           border-radius: 14px; padding: 1.1rem 1.3rem;
           display: flex; align-items: center; gap: 13px;
         }
-        .db-urgency-icon {
-          font-size: 28px;
-        }
+        .db-urgency-icon { font-size: 28px; }
         .db-urgency-title { font-size: 12px; font-weight: 700; color: #B91C1C; margin-bottom: 1px; }
         .db-urgency-num {
           font-family: 'DM Serif Display', serif;
@@ -297,7 +318,6 @@ export default function Dashboard() {
           .db-page-header { flex-direction: column; }
         }
 
-        /* Styles supplémentaires pour les stats et le tableau */
         .stats-row {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
@@ -371,11 +391,35 @@ export default function Dashboard() {
           background: var(--green);
           color: white;
         }
+
+        .pdf-footer-strip {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          padding: 10px 16px;
+          border-top: 1px solid var(--border);
+          background: var(--green-pale);
+        }
+        .pdf-footer-btn {
+          display: inline-flex; align-items: center; gap: 7px;
+          background: #fff;
+          color: #D04A4A;
+          border: 1.5px solid rgba(208,74,74,0.25);
+          border-radius: 9px;
+          padding: 7px 14px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 12px; font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .pdf-footer-btn:hover {
+          background: #FEF2F2;
+          border-color: #D04A4A;
+          box-shadow: 0 3px 10px rgba(208,74,74,0.12);
+        }
       `}</style>
 
       <div className="db-shell">
-        {/* La navbar a été supprimée */}
-
         <main className="db-main">
           <div className="db-page-header">
             <div>
@@ -393,7 +437,7 @@ export default function Dashboard() {
           </div>
 
           <div className="db-grid">
-            {/* Colonne principale dynamique */}
+            {/* Colonne principale */}
             <div className="db-card">
               <div className="db-card-head">
                 <div className="db-card-title">Vue d'ensemble</div>
@@ -482,6 +526,21 @@ export default function Dashboard() {
                   </>
                 )}
               </div>
+
+              {/* Bande PDF en bas de la carte */}
+              {totalEvals > 0 && (
+                <div className="pdf-footer-strip">
+                  <button className="pdf-footer-btn" onClick={() => telechargerPDF(pdfData)}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                      <line x1="12" y1="18" x2="12" y2="12"/>
+                      <line x1="9" y1="15" x2="15" y2="15"/>
+                    </svg>
+                    Télécharger ce rapport en PDF
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Sidebar */}
